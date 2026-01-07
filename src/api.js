@@ -72,38 +72,38 @@ export const dashboardData = () => api.get("/api/dashboard");
 export const getCategories = () => 
   api.get("/categories");
 
-export const addCategory = (payload) => api.post("/categories", payload);
-export const updateCategory = (id, payload) => api.put(`/categories/${id}`, payload);
-export const deleteCategory = (id) => api.delete(`/categories/${id}`);
+export const addCategory = (payload) => api.post("/api/categories", payload);
+export const updateCategory = (id, payload) => api.put(`/api/categories/${id}`, payload);
+export const deleteCategory = (id) => api.delete(`/api/categories/${id}`);
 
 // Ratings
 export const getRatings = () => 
   api.get("/ratings");
 
-export const addRating = (payload) => api.post("/ratings", payload);
-export const updateRating = (id, payload) => api.put(`/ratings/${id}`, payload);
-export const deleteRating = (id) => api.delete(`/ratings/${id}`);
+export const addRating = (payload) => api.post("/api/ratings", payload);
+export const updateRating = (id, payload) => api.put(`/api/ratings/${id}`, payload);
+export const deleteRating = (id) => api.delete(`/api/ratings/${id}`);
 
 // Locations
 export const getLocations = () => 
   api.get("/locations");
 
-export const addLocation = (payload) => api.post("/locations", payload);
-export const updateLocation = (id, payload) => api.put(`/locations/${id}`, payload);
-export const deleteLocation = (id) => api.delete(`/locations/${id}`);
+export const addLocation = (payload) => api.post("/api/locations", payload);
+export const updateLocation = (id, payload) => api.put(`/api/locations/${id}`, payload);
+export const deleteLocation = (id) => api.delete(`/api/locations/${id}`);
 
 // Legal Policies
 export const getLegalPolicies = () => 
   api.get("/legal-policies");
 
-export const addLegalPolicy = (payload) => api.post("/legal-policies", payload);
-export const updateLegalPolicy = (id, payload) => api.put(`/legal-policies/${id}`, payload);
-export const deleteLegalPolicy = (id) => api.delete(`/legal-policies/${id}`);
+export const addLegalPolicy = (payload) => api.post("/api/legal-policies", payload);
+export const updateLegalPolicy = (id, payload) => api.put(`/api/legal-policies/${id}`, payload);
+export const deleteLegalPolicy = (id) => api.delete(`/api/legal-policies/${id}`);
 
 // Reports
-export const getReports = () => api.get("/reports");
-export const addReport = (payload) => api.post("/reports", payload);
-export const updateReport = (id, payload) => api.put(`/reports/${id}`, payload);
-export const deleteReport = (id) => api.delete(`/reports/${id}`);
+export const getReports = () => api.get("/api/reports");
+export const addReport = (payload) => api.post("/api/reports", payload);
+export const updateReport = (id, payload) => api.put(`/api/reports/${id}`, payload);
+export const deleteReport = (id) => api.delete(`/api/reports/${id}`);
 
 export default api;
