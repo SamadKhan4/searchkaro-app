@@ -54,19 +54,19 @@ api.interceptors.response.use(
 
 // API ---
 // Signup - connects to /api/signup (proxied to http://localhost:3000 in development)
-export const signup = (payload) => api.post("/signup", payload);
+export const signup = (payload) => api.post("/api/signup", payload);
 
 // Login
 export const login = (payload) => {
   console.log("Making login request with payload:", payload);
-  return api.post("/login", payload);
+  return api.post("/api/login", payload);
 };
 
 // Search
-export const searchAPI = (q) => api.get("/search", { params: { q } });
+export const searchAPI = (q) => api.get("/api/search", { params: { q } });
 
 // Dashboard
-export const dashboardData = () => api.get("/dashboard");
+export const dashboardData = () => api.get("/api/dashboard");
 
 // Categories
 export const getCategories = () => 
