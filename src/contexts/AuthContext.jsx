@@ -1,35 +1,49 @@
-/* eslint-disable react-hooks/immutability */
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect, useContext } from "react";
 import { login as loginApi } from "../api";
 
 const AuthContext = createContext();
 
+// 🔥 COOKIE HELPERS
+function getCookie(name) {
+  const nameEQ = name + "=";
+  const ca = document.cookie.split(";");
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === " ") c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+}
+
+function setCookie(name, value, days = 7) {
+  const expires = new Date();
+  expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+  document.cookie = `${name}=${value}; path=/; expires=${expires.toUTCString()}; SameSite=Lax`;
+}
+
+function deleteCookie(name) {
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax`;
+}
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(localStorage.getItem("auth_token"));
+  const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Restore session from cookie if present
+  // Restore session from cookie only
   useEffect(() => {
-    const cookieToken = getCookie("auth_token");
+    const storedToken = getCookie("token");
 
-    if (cookieToken) {
-      setToken(cookieToken);
-      setUser({ loggedIn: true });
-    } else if (token) {
+    if (storedToken) {
+      setToken(storedToken);
       setUser({ loggedIn: true });
     } else {
+      setToken(null);
       setUser(null);
     }
-  }, [token]);
-
-  // 👍 Helper: Read cookie
-  const getCookie = (name) => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(";").shift();
-    return null;
-  };
+    setLoading(false);
+  }, []);
 
   // -------------------------
   // LOGIN FUNCTION
@@ -38,23 +52,16 @@ export function AuthProvider({ children }) {
     try {
       const res = await loginApi(credentials);
 
-      console.log("LOGIN RESPONSE:", res.data);
-
-      const t =
-        res.data.token ||
-        res.data.accessToken ||
-        res.data.authToken ||
-        res.data.jwt ;
-
+      // Extract token (your backend sends "token")
+      const t = res.data.token;
       const u = res.data.user || { loggedIn: true };
 
-      // ✅ Save Token in Cookie
-      document.cookie = `auth_token=${t}; path=/; max-age=${
-        60 * 60 * 24 * 7
-      }; SameSite=Lax`;
+      if (!t) {
+        throw new Error("No token received from server");
+      }
 
-      // (Optional) Also keep in local storage
-      localStorage.setItem("auth_token", t);
+      // 🔥 Store ONLY in cookie
+      setCookie("token", t, 7); // 7 days expiry
 
       setToken(t);
       setUser(u);
@@ -63,7 +70,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       return {
         success: false,
-        error: err.response?.data?.message || "Login failed",
+        error: err.response?.data?.message || err.message || "Login failed",
       };
     }
   };
@@ -72,12 +79,8 @@ export function AuthProvider({ children }) {
   // LOGOUT FUNCTION
   // -------------------------
   const logout = () => {
-    // ❌ Remove cookie
-    document.cookie =
-      "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax";
-
-    // ❌ Remove localStorage
-    localStorage.removeItem("auth_token");
+    // Clear cookie only
+    deleteCookie("token");
 
     setToken(null);
     setUser(null);
@@ -87,7 +90,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isAuthenticated, login, logout }}
+      value={{ user, token, isAuthenticated, login, logout, loading }}
     >
       {children}
     </AuthContext.Provider>

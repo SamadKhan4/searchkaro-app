@@ -1,20 +1,14 @@
 /* eslint-disable no-unused-vars */
 import React, { useContext, useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import AuthContext from "../contexts/AuthContext";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { RxBell, RxPencil1, RxChevronDown } from "react-icons/rx";
 import { X, CheckCircle, Menu } from "lucide-react";
 
 export default function Navbar({ toggleSidebar }) {
   const location = useLocation();
-  
-  const { user } =
-    useContext(AuthContext) || {
-      user: {
-        name: "John Doe",
-        profile: "Admin",
-      },
-    };
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [logoutDialog, setLogoutDialog] = useState(false);
@@ -145,11 +139,14 @@ export default function Navbar({ toggleSidebar }) {
 
   // Logout function
   const handleLogout = () => {
-    document.cookie =
-      "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
-    localStorage.removeItem("token");
-
-    window.location.href = "/login";
+    // Use the logout function from AuthContext which properly clears the token
+    logout();
+    
+    // Close the dialog
+    setLogoutDialog(false);
+    
+    // Navigate to login page
+    navigate("/login");
   };
 
   return (
@@ -216,7 +213,7 @@ export default function Navbar({ toggleSidebar }) {
                 <div className="flex-grow">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-lg font-semibold text-gray-900">
-                      {user.name}
+                      {user?.name || "User"}
                     </span>
 
                     <button
@@ -231,7 +228,7 @@ export default function Navbar({ toggleSidebar }) {
                   </div>
 
                   <button className="w-full text-left flex items-center justify-between text-sm px-3 py-1 border border-gray-300 rounded-md bg-gray-50">
-                    <span>{user.profile}</span>
+                    <span>{user?.profile || "User"}</span>
                     <RxChevronDown className="w-4 h-4 text-gray-500" />
                   </button>
                 </div>

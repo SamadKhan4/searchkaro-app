@@ -14,9 +14,18 @@ import LegalPolicy from "./pages/LegalPolicy";
 import Location from "./pages/Location";
 import Rating from "./pages/Rating";
 
+
 // PrivateRoute wrapper
 function PrivateRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+  
+  // Show nothing while checking authentication
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
+    </div>;
+  }
+  
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
@@ -104,6 +113,7 @@ export default function App() {
               </PrivateRoute>
             }
           />
+          
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/login" replace />} />

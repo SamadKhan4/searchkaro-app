@@ -1,48 +1,109 @@
-// Axios instance + API helpers
+// Axios instance + API helpers for real backend
 import axios from "axios";
 
-// Use proxy in development, direct URL in production
-const API_BASE = import.meta.env.DEV 
-  ? "/api" // Uses Vite proxy to avoid CORS
-  : "https://elitetask-production.up.railway.app";
-
-
-// Create axios instance
+// Configure axios instance for the real backend
 const api = axios.create({
-  baseURL: API_BASE,
-  withCredentials: true, // 🔥 important for cookies
+  baseURL: import.meta.env.DEV ? "/api" : "https://searchkaro-backend.onrender.com",
+  withCredentials: true,
   headers: { "Content-Type": "application/json" },
+  timeout: 10000,
 });
 
-// ❌ REMOVE token interceptor (not needed for cookies)
-// api.interceptors.request.use(...)
+// Ensure credentials are sent with every request
+api.defaults.withCredentials = true;
 
-// ---- API ENDPOINTS ----
+// 🔥 Token interceptor — REQUIRED for protected routes
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop().split(";").shift();
+  }
+  return null;
+}
 
-// Signup
+api.interceptors.request.use(
+  (config) => {
+    // Use consistent token name with AuthContext
+    const token = getCookie("token");
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Also add a response interceptor to handle 401/403 errors
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Clear auth tokens on authorization errors (consistent with AuthContext)
+      document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax";
+    }
+    return Promise.reject(error);
+  }
+);
+
+// API ---
+// Signup - connects to /api/signup (proxied to http://localhost:3000 in development)
 export const signup = (payload) => api.post("/signup", payload);
 
 // Login
-export const login = (payload) => api.post("/login", payload);
+export const login = (payload) => {
+  console.log("Making login request with payload:", payload);
+  return api.post("/login", payload);
+};
 
-// Search API
+// Search
 export const searchAPI = (q) => api.get("/search", { params: { q } });
 
-// Dashboard data (protected)
+// Dashboard
 export const dashboardData = () => api.get("/dashboard");
 
-// Categories API
-export const getCategories = (page = 1, limit = 10) => 
-  api.get("/categories", { params: { page, limit } });
+// Categories
+export const getCategories = () => 
+  api.get("/categories");
+
 export const addCategory = (payload) => api.post("/categories", payload);
 export const updateCategory = (id, payload) => api.put(`/categories/${id}`, payload);
 export const deleteCategory = (id) => api.delete(`/categories/${id}`);
 
-// Reports API
+// Ratings
+export const getRatings = () => 
+  api.get("/ratings");
+
+export const addRating = (payload) => api.post("/ratings", payload);
+export const updateRating = (id, payload) => api.put(`/ratings/${id}`, payload);
+export const deleteRating = (id) => api.delete(`/ratings/${id}`);
+
+// Locations
+export const getLocations = () => 
+  api.get("/locations");
+
+export const addLocation = (payload) => api.post("/locations", payload);
+export const updateLocation = (id, payload) => api.put(`/locations/${id}`, payload);
+export const deleteLocation = (id) => api.delete(`/locations/${id}`);
+
+// Legal Policies
+export const getLegalPolicies = () => 
+  api.get("/legal-policies");
+
+export const addLegalPolicy = (payload) => api.post("/legal-policies", payload);
+export const updateLegalPolicy = (id, payload) => api.put(`/legal-policies/${id}`, payload);
+export const deleteLegalPolicy = (id) => api.delete(`/legal-policies/${id}`);
+
+// Reports
 export const getReports = () => api.get("/reports");
 export const addReport = (payload) => api.post("/reports", payload);
 export const updateReport = (id, payload) => api.put(`/reports/${id}`, payload);
 export const deleteReport = (id) => api.delete(`/reports/${id}`);
 
-// Export default instance
 export default api;

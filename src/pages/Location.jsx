@@ -1,17 +1,12 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, X, Search } from "lucide-react";
+import { getLocations, addLocation } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Location() {
-  const [locations, setLocations] = useState([
-    { id: 1, srNo: 1, role: "Buyer", location: "London", region: "Europe", popular: true },
-    { id: 2, srNo: 2, role: "Buyer", location: "Mumbai", region: "Asia", popular: false },
-    { id: 3, srNo: 3, role: "Seller", location: "Berlin", region: "Europe", popular: true },
-    { id: 4, srNo: 4, role: "Buyer", location: "Toronto", region: "North America", popular: true },
-    { id: 5, srNo: 5, role: "Buyer", location: "Paris", region: "Europe", popular: false },
-    { id: 6, srNo: 6, role: "Seller", location: "Berlin", region: "Europe", popular: true },
-  ]);
-
+  const { isAuthenticated } = useAuth();
+  const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -59,6 +54,45 @@ export default function Location() {
     reg.toLowerCase().includes(regionSearch.toLowerCase())
   );
 
+  // Fetch locations from API
+  const fetchLocations = async () => {
+    setLoading(true);
+    try {
+      const response = await getLocations();
+      
+      // Handle response
+      if (Array.isArray(response.data)) {
+        setLocations(response.data);
+      } else if (response.data.locations && Array.isArray(response.data.locations)) {
+        setLocations(response.data.locations);
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        setLocations(response.data.data);
+      }
+      
+      setError("");
+    } catch (err) {
+      console.error("Error fetching locations:", err);
+      setError("Failed to load locations. Please try again later.");
+      
+      // Fallback to mock data if API fails
+      setLocations([
+        { id: 1, srNo: 1, role: "Buyer", location: "London", region: "Europe", popular: true },
+        { id: 2, srNo: 2, role: "Buyer", location: "Mumbai", region: "Asia", popular: false },
+        { id: 3, srNo: 3, role: "Seller", location: "Berlin", region: "Europe", popular: true },
+        { id: 4, srNo: 4, role: "Buyer", location: "Toronto", region: "North America", popular: true },
+        { id: 5, srNo: 5, role: "Buyer", location: "Paris", region: "Europe", popular: false },
+        { id: 6, srNo: 6, role: "Seller", location: "Berlin", region: "Europe", popular: true }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch locations on component mount
+  useEffect(() => {
+    fetchLocations();
+  }, []);
+
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -82,23 +116,30 @@ export default function Location() {
     setLoading(true);
 
     try {
-      // TODO: API call will be added later
-      // const response = await addLocation(formData);
+      const response = await addLocation(formData);
       
-      // For now, adding locally
-      const newLocation = {
-        id: locations.length + 1,
-        srNo: locations.length + 1,
-        ...formData
-      };
-      
-      setLocations([...locations, newLocation]);
-      
-      // Reset form and close dialog
-      resetForm();
+      // Check if the operation was successful
+      if (response?.status === 200 || response?.status === 201) {
+        // Instead of refreshing the entire list, add the new location to the existing list
+        // This avoids full page refresh and maintains UX stability
+        if (response.data?.location) {
+          setLocations(prevLocations => [...prevLocations, response.data.location]);
+        }
+        
+        // Reset form and close dialog
+        resetForm();
+      } else {
+        throw new Error(response?.data?.message || "Failed to add location");
+      }
     } catch (err) {
       console.error("Error adding location:", err);
-      setError(err.response?.data?.message || "Failed to add location");
+      if (err.response?.status === 403) {
+        setError("Access denied: You don't have permission to add locations.");
+      } else if (err.response?.status === 401) {
+        setError("Authentication required: Please log in again.");
+      } else {
+        setError(err.response?.data?.message || "Failed to add location");
+      }
     } finally {
       setLoading(false);
     }

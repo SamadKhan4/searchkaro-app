@@ -1,20 +1,15 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Plus, X, Search, Star } from "lucide-react";
+import { getRatings, addRating } from "../api";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Rating() {
-  const [ratings, setRatings] = useState([
-    { id: 1, srNo: 1, categories: "Jeans", shop: "Clothes", rating: 4.5, review: true },
-    { id: 2, srNo: 2, categories: "iPhone", shop: "Mobile", rating: 3.5, review: false },
-    { id: 3, srNo: 3, categories: "Dell", shop: "Laptop", rating: 3.5, review: false },
-    { id: 4, srNo: 4, categories: "Boots", shop: "Shoes", rating: 4.5, review: true },
-    { id: 5, srNo: 5, categories: "Pizzaria Cafe", shop: "Food", rating: 4.5, review: false },
-    { id: 6, srNo: 6, categories: "Wellness Oasis Clinic", shop: "Hospital", rating: 3.5, review: true },
-  ]);
-
+  const { isAuthenticated } = useAuth();
+  const [ratings, setRatings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
+  
   const [showDialog, setShowDialog] = useState(false);
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [showCustomShop, setShowCustomShop] = useState(false);
@@ -59,6 +54,45 @@ export default function Rating() {
   const filteredShops = predefinedShops.filter(shop =>
     shop.toLowerCase().includes(shopSearch.toLowerCase())
   );
+
+  // Fetch ratings from API
+  const fetchRatings = async () => {
+    setLoading(true);
+    try {
+      const response = await getRatings();
+      
+      // Handle response
+      if (Array.isArray(response.data)) {
+        setRatings(response.data);
+      } else if (response.data.ratings && Array.isArray(response.data.ratings)) {
+        setRatings(response.data.ratings);
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        setRatings(response.data.data);
+      }
+      
+      setError("");
+    } catch (err) {
+      console.error("Error fetching ratings:", err);
+      setError("Failed to load ratings. Please try again later.");
+      
+      // Fallback to mock data if API fails
+      setRatings([
+        { id: 1, srNo: 1, categories: "Jeans", shop: "Clothes", rating: 4.5, review: true },
+        { id: 2, srNo: 2, categories: "iPhone", shop: "Mobile", rating: 3.5, review: false },
+        { id: 3, srNo: 3, categories: "Dell", shop: "Laptop", rating: 3.5, review: false },
+        { id: 4, srNo: 4, categories: "Boots", shop: "Shoes", rating: 4.5, review: true },
+        { id: 5, srNo: 5, categories: "Pizzaria Cafe", shop: "Food", rating: 4.5, review: false },
+        { id: 6, srNo: 6, categories: "Wellness Oasis Clinic", shop: "Hospital", rating: 3.5, review: true }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch ratings on component mount
+  useEffect(() => {
+    fetchRatings();
+  }, []);
 
   // Render star rating
   const renderStars = (rating) => {
@@ -113,24 +147,30 @@ export default function Rating() {
     setLoading(true);
 
     try {
-      // TODO: API call will be added later
-      // const response = await addRating(formData);
+      const response = await addRating(formData);
       
-      // For now, adding locally
-      const newRating = {
-        id: ratings.length + 1,
-        srNo: ratings.length + 1,
-        ...formData,
-        rating: parseFloat(formData.rating)
-      };
-      
-      setRatings([...ratings, newRating]);
-      
-      // Reset form and close dialog
-      resetForm();
+      // Check if the operation was successful
+      if (response?.status === 200 || response?.status === 201) {
+        // Instead of refreshing the entire list, add the new rating to the existing list
+        // This avoids full page refresh and maintains UX stability
+        if (response.data?.rating) {
+          setRatings(prevRatings => [...prevRatings, response.data.rating]);
+        }
+        
+        // Reset form and close dialog
+        resetForm();
+      } else {
+        throw new Error(response?.data?.message || "Failed to add rating");
+      }
     } catch (err) {
       console.error("Error adding rating:", err);
-      setError(err.response?.data?.message || "Failed to add rating");
+      if (err.response?.status === 403) {
+        setError("Access denied: You don't have permission to add ratings.");
+      } else if (err.response?.status === 401) {
+        setError("Authentication required: Please log in again.");
+      } else {
+        setError(err.response?.data?.message || "Failed to add rating");
+      }
     } finally {
       setLoading(false);
     }

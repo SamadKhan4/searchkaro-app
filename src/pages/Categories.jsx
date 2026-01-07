@@ -1,22 +1,14 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { Plus, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { getCategories, addCategory } from "../api";
-import { useAuth } from "../contexts/AuthContext"; // Added import for Auth context
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Categories() {
-  const { isAuthenticated, user } = useAuth(); // Get auth status
+  const { isAuthenticated } = useAuth();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [itemsPerPage] = useState(10); // Items per page
-
   const [showDialog, setShowDialog] = useState(false);
   const [showCustomCategory, setShowCustomCategory] = useState(false);
   const [showCustomProduct, setShowCustomProduct] = useState(false);
@@ -27,7 +19,7 @@ export default function Categories() {
     role: "",
     category: "",
     product: "",
-    popular: true  // Boolean value for backend
+    popular: true
   });
 
   // Predefined options
@@ -62,7 +54,54 @@ export default function Categories() {
     prod.toLowerCase().includes(productSearch.toLowerCase())
   );
 
-  // Fetch categories on component mount and when page changes
+  // Fetch categories from API
+  const fetchCategories = async () => {
+    setLoading(true);
+    try {
+      console.log("Fetching categories with auth status:", isAuthenticated);
+      
+      // API call without pagination parameters
+      const response = await getCategories();
+      console.log("Categories API Response:", response);
+      
+      // Handle response (assuming it's an array of categories)
+      if (Array.isArray(response.data)) {
+        // Set categories directly from response
+        setCategories(response.data);
+      } else if (response.data.categories && Array.isArray(response.data.categories)) {
+        // If response has a categories property that contains the array
+        setCategories(response.data.categories);
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        // If response has a data property that contains the array
+        setCategories(response.data.data);
+      }
+      
+      setError("");
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      console.error("Error response:", err.response);
+      
+      // More detailed error messaging
+      if (err.response?.status === 403) {
+        setError("Access denied: You don't have permission to view categories. Please contact your administrator.");
+      } else if (err.response?.status === 401) {
+        setError("Authentication required: Please log in again.");
+      } else {
+        setError("Failed to load categories. Please try again later.");
+      }
+      
+      // Fallback to mock data if API fails
+      setCategories([
+        { id: "1", srNo: 1, role: "Buyer", category: "Clothes", product: "Jeans", popular: true },
+        { id: "2", srNo: 2, role: "Buyer", category: "Mobile", product: "iPhone", popular: false },
+        { id: "3", srNo: 3, role: "Seller", category: "Laptop", product: "Dell", popular: false },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch categories on component mount
   useEffect(() => {
     // Only fetch categories if user is authenticated
     if (isAuthenticated) {
@@ -70,59 +109,7 @@ export default function Categories() {
     } else {
       setError("You must be logged in to view categories");
     }
-  }, [currentPage, isAuthenticated]);
-
-  // Fetch categories from API with pagination
-  const fetchCategories = async () => {
-    setLoading(true);
-    try {
-      // API call with pagination parameters
-      const response = await getCategories(currentPage, itemsPerPage);
-      
-      // Check if response has pagination metadata
-      if (response.data.data && response.data.pagination) {
-        // Backend returns: { data: [...], pagination: { total, totalPages, currentPage } }
-        setCategories(response.data.data);
-        setTotalItems(response.data.pagination.total);
-        setTotalPages(response.data.pagination.totalPages);
-      } else if (Array.isArray(response.data)) {
-        // Backend returns array directly: [{ id, srNo, role, category, product, popular }]
-        const data = response.data;
-        setCategories(data);
-        
-        // Estimate total pages based on current data
-        // If we get less than itemsPerPage, we're on the last page
-        if (data.length < itemsPerPage) {
-          setTotalPages(currentPage);
-          setTotalItems((currentPage - 1) * itemsPerPage + data.length);
-        } else {
-          // Assume there might be more pages
-          setTotalPages(currentPage + 1);
-          setTotalItems(currentPage * itemsPerPage);
-        }
-      }
-      
-      setError("");
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      // More detailed error messaging
-      if (err.response?.status === 403) {
-        setError("Access denied: You don't have permission to view categories. Please contact your administrator.");
-      } else {
-        setError("Failed to load categories. Please try again later.");
-      }
-      // Fallback to mock data if API fails
-      setCategories([
-        { id: "1", srNo: 1, role: "Buyer", category: "Clothes", product: "Jeans", popular: true },
-        { id: "2", srNo: 2, role: "Buyer", category: "Mobile", product: "iPhone", popular: false },
-        { id: "3", srNo: 3, role: "Seller", category: "Laptop", product: "Dell", popular: false },
-      ]);
-      setTotalPages(1);
-      setTotalItems(3);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isAuthenticated]);
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -135,6 +122,10 @@ export default function Categories() {
     e.preventDefault();
     
     // Validation: Ensure category and product are selected
+    if (!formData.role) {
+      setError("Please select a role");
+      return;
+    }
     if (!formData.category) {
       setError("Please select or enter a category");
       return;
@@ -149,21 +140,31 @@ export default function Categories() {
     try {
       const response = await addCategory(formData);
       
-      // Refresh categories list after adding
-      await fetchCategories();
-      
-      // Reset form and close dialog
-      setFormData({ role: "", category: "", product: "", popular: true });
-      setCategorySearch("");
-      setProductSearch("");
-      setShowCustomCategory(false);
-      setShowCustomProduct(false);
-      setShowDialog(false);
-      setError("");
+      // Check if the operation was successful
+      if (response?.status === 200 || response?.status === 201) {
+        // Instead of refreshing the entire list, add the new category to the existing list
+        // This avoids full page refresh and maintains UX stability as per memory constraint
+        if (response.data?.category) {
+          setCategories(prevCategories => [...prevCategories, response.data.category]);
+        }
+        
+        // Reset form and close dialog
+        setFormData({ role: "", category: "", product: "", popular: true });
+        setCategorySearch("");
+        setProductSearch("");
+        setShowCustomCategory(false);
+        setShowCustomProduct(false);
+        setShowDialog(false);
+        setError("");
+      } else {
+        throw new Error(response?.data?.message || "Failed to add category");
+      }
     } catch (err) {
       console.error("Error adding category:", err);
       if (err.response?.status === 403) {
         setError("Access denied: You don't have permission to add categories.");
+      } else if (err.response?.status === 401) {
+        setError("Authentication required: Please log in again.");
       } else {
         setError(err.response?.data?.message || "Failed to add category");
       }
@@ -182,7 +183,7 @@ export default function Categories() {
         <button
           onClick={() => setShowDialog(true)}
           className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-all duration-300 shadow-md hover:shadow-lg"
-          disabled={!isAuthenticated} // Disable if not authenticated
+          disabled={!isAuthenticated}
         >
           <Plus className="w-5 h-5" />
           <span className="font-medium">Add Category</span>
@@ -235,7 +236,7 @@ export default function Categories() {
             <tbody>
               {categories.map((item, index) => (
                 <tr
-                  key={item.id}
+                  key={item._id || item.id || index} // Use _id from MongoDB, fallback to id or index
                   className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
                     index % 2 === 0 ? "bg-white" : "bg-gray-50/50"
                   }`}
@@ -261,70 +262,6 @@ export default function Categories() {
             </tbody>
           </table>
         </div>
-        )}
-        
-        {/* Pagination Controls */}
-        {!loading && categories.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
-            {/* Showing info */}
-            <div className="text-sm text-gray-600">
-              Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} entries
-            </div>
-            
-            {/* Pagination buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Previous page"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              
-              {/* Page numbers */}
-              <div className="flex items-center gap-1">
-                {[...Array(totalPages)].map((_, index) => {
-                  const pageNum = index + 1;
-                  // Show first page, last page, current page, and pages around current
-                  if (
-                    pageNum === 1 ||
-                    pageNum === totalPages ||
-                    (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                  ) {
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
-                        className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                          currentPage === pageNum
-                            ? "bg-teal-500 text-white"
-                            : "border border-gray-300 hover:bg-white text-gray-700"
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  } else if (
-                    pageNum === currentPage - 2 ||
-                    pageNum === currentPage + 2
-                  ) {
-                    return <span key={pageNum} className="px-2 text-gray-500">...</span>;
-                  }
-                  return null;
-                })}
-              </div>
-              
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages || categories.length < itemsPerPage}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Next page"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
         )}
       </div>
 
@@ -372,7 +309,7 @@ export default function Categories() {
                     onChange={handleInputChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                     required
-                    disabled={!isAuthenticated} // Disable if not authenticated
+                    disabled={!isAuthenticated}
                   >
                     <option value="">Select Role</option>
                     <option value="Buyer">Buyer</option>
@@ -390,7 +327,7 @@ export default function Categories() {
                       type="button"
                       onClick={() => setShowCustomCategory(!showCustomCategory)}
                       className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 font-medium transition-colors"
-                      disabled={!isAuthenticated} // Disable if not authenticated
+                      disabled={!isAuthenticated}
                     >
                       <Plus className="w-3 h-3" />
                       {showCustomCategory ? "Select from list" : "Custom category"}
@@ -407,7 +344,7 @@ export default function Categories() {
                       placeholder="Enter custom category"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                       required
-                      disabled={!isAuthenticated} // Disable if not authenticated
+                      disabled={!isAuthenticated}
                     />
                   ) : (
                     // Searchable Dropdown
@@ -421,7 +358,7 @@ export default function Categories() {
                           onFocus={() => setCategorySearch(categorySearch)}
                           placeholder="Search categories..."
                           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-                          disabled={!isAuthenticated} // Disable if not authenticated
+                          disabled={!isAuthenticated}
                         />
                       </div>
                       
@@ -437,7 +374,7 @@ export default function Categories() {
                                   setCategorySearch(cat);
                                 }}
                                 className="w-full text-left px-4 py-2 hover:bg-teal-50 transition-colors text-sm"
-                                disabled={!isAuthenticated} // Disable if not authenticated
+                                disabled={!isAuthenticated}
                               >
                                 {cat}
                               </button>
@@ -469,7 +406,7 @@ export default function Categories() {
                       type="button"
                       onClick={() => setShowCustomProduct(!showCustomProduct)}
                       className="flex items-center gap-1 text-xs text-teal-600 hover:text-teal-700 font-medium transition-colors"
-                      disabled={!isAuthenticated} // Disable if not authenticated
+                      disabled={!isAuthenticated}
                     >
                       <Plus className="w-3 h-3" />
                       {showCustomProduct ? "Select from list" : "Custom product"}
@@ -486,7 +423,7 @@ export default function Categories() {
                       placeholder="Enter custom product"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                       required
-                      disabled={!isAuthenticated} // Disable if not authenticated
+                      disabled={!isAuthenticated}
                     />
                   ) : (
                     // Searchable Dropdown
@@ -500,7 +437,7 @@ export default function Categories() {
                           onFocus={() => setProductSearch(productSearch)}
                           placeholder="Search products..."
                           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-                          disabled={!isAuthenticated} // Disable if not authenticated
+                          disabled={!isAuthenticated}
                         />
                       </div>
                       
@@ -516,7 +453,7 @@ export default function Categories() {
                                   setProductSearch(prod);
                                 }}
                                 className="w-full text-left px-4 py-2 hover:bg-teal-50 transition-colors text-sm"
-                                disabled={!isAuthenticated} // Disable if not authenticated
+                                disabled={!isAuthenticated}
                               >
                                 {prod}
                               </button>
@@ -549,7 +486,7 @@ export default function Categories() {
                     onChange={(e) => setFormData({ ...formData, popular: e.target.value === 'true' })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                     required
-                    disabled={!isAuthenticated} // Disable if not authenticated
+                    disabled={!isAuthenticated}
                   >
                     <option value="true">Positive</option>
                     <option value="false">Negative</option>
@@ -577,7 +514,7 @@ export default function Categories() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading || !isAuthenticated} // Disable if not authenticated
+                  disabled={loading || !isAuthenticated}
                   className="flex-1 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition-colors font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Adding..." : "Add Category"}

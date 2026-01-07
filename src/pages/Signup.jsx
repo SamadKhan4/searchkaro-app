@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 export default function Signup() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -15,12 +15,79 @@ export default function Signup() {
     setLoading(true);
     setError("");
 
+    // Client-side validation
+    if (!form.name.trim()) {
+      setError("Name is required");
+      setLoading(false);
+      return;
+    }
+    
+    if (!form.email.trim()) {
+      setError("Email is required");
+      setLoading(false);
+      return;
+    }
+    
+    // Basic email validation
+    if (!/\S+@\S+\.\S+/.test(form.email)) {
+      setError("Please enter a valid email address");
+      setLoading(false);
+      return;
+    }
+    
+    if (!form.password) {
+      setError("Password is required");
+      setLoading(false);
+      return;
+    }
+    
+    // Minimum password length validation
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log("Sending signup request with payload:", form);
       const response = await signup(form);
+      console.log("Signup response:", response);
       alert("Signup successful!");
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong!");
+      // Log the full error for debugging
+      console.error("Signup error:", err);
+      
+      // More detailed error handling
+      if (err.response) {
+        // Server responded with error status
+        console.error("Error response data:", err.response.data);
+        console.error("Error response status:", err.response.status);
+        console.error("Error response headers:", err.response.headers);
+        
+        // Display a more detailed error message
+        let errorMessage = `Server Error: ${err.response.status}`;
+        if (err.response.data) {
+          if (err.response.data.message) {
+            errorMessage += ` - ${err.response.data.message}`;
+          } else if (typeof err.response.data === 'string') {
+            errorMessage += ` - ${err.response.data}`;
+          } else {
+            errorMessage += ` - ${JSON.stringify(err.response.data)}`;
+          }
+        } else {
+          errorMessage += ` - ${err.response.statusText}`;
+        }
+        setError(errorMessage);
+      } else if (err.request) {
+        // Request was made but no response received
+        console.error("Error request:", err.request);
+        setError("Network Error: Unable to reach server. Please check your internet connection.");
+      } else {
+        // Something else happened
+        console.error("Error message:", err.message);
+        setError(`Error: ${err.message || "Something went wrong!"}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -88,6 +155,22 @@ export default function Signup() {
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && <p className="text-red-500">{error}</p>}
+
+          {/* Name field */}
+          <motion.input
+            variants={fadeSlideRight}
+            initial="hidden"
+            animate="visible"
+            transition={{ delay: 0.1 }}
+            className="w-full border rounded-lg px-4 py-3"
+            placeholder="Full Name"
+            type="text"
+            value={form.name}
+            onChange={(e) =>
+              setForm({ ...form, name: e.target.value })
+            }
+            required
+          />
 
           {/* Email field */}
           <motion.input

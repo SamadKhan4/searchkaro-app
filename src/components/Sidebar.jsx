@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useRef } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
@@ -52,10 +52,22 @@ export default function Sidebar({ isOpen, toggle }) {
   const [countdown, setCountdown] = useState(3);
   const timerRef = useRef(null);
 
+  // ⛔ Actual logout process
+  const confirmLogout = () => {
+    // Clear the timer immediately on manual logout
+    if (timerRef.current) {
+        clearInterval(timerRef.current);
+    }
+    
+    document.cookie =
+      "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
+
+    navigate("/login");
+  };
+
   // Function to reset and close the modal
   const closeModal = () => {
     setShowDialog(false);
-    setCountdown(3);
     if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -65,7 +77,6 @@ export default function Sidebar({ isOpen, toggle }) {
   // Effect to manage the countdown timer
   useEffect(() => {
     if (showDialog) {
-        // Start countdown only when the dialog is open
         setCountdown(3); // Reset to initial count
         timerRef.current = setInterval(() => {
             setCountdown((prevCount) => {
@@ -92,23 +103,8 @@ export default function Sidebar({ isOpen, toggle }) {
             clearInterval(timerRef.current);
         }
     };
-  }, [showDialog]);
+  }, [showDialog, confirmLogout]);
 
-
-  // ⛔ Actual logout process
-  const confirmLogout = () => {
-    // Clear the timer immediately on manual logout
-    if (timerRef.current) {
-        clearInterval(timerRef.current);
-    }
-    
-    document.cookie =
-      "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax";
-
-    localStorage.removeItem("token");
-
-    navigate("/login");
-  };
 
   const baseLinkStyle =
     "flex items-center gap-3 py-3 px-4 rounded-lg transition-all duration-300 font-medium";

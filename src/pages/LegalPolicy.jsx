@@ -1,57 +1,62 @@
 /* eslint-disable no-unused-vars */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronRight, X, Plus } from "lucide-react";
+import { getLegalPolicies } from "../api";
 
 export default function LegalPolicy() {
-  const [expandedIndex, setExpandedIndex] = useState(0); // First item expanded by default
+  const [expandedIndex, setExpandedIndex] = useState(null); // No item expanded by default
+  const [faqs, setFaqs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // FAQ data from the image
-  const faqs = [
-    {
-      id: 1,
-      question: "How do I book a service?",
-      answer: "You can book a service by selecting your preferred category, choosing a time slot, and confirming the booking via the app."
-    },
-    {
-      id: 2,
-      question: "How do I track my service provider?",
-      answer: "You can track your service provider in real-time through the tracking feature available in your active bookings section."
-    },
-    {
-      id: 3,
-      question: "What if I face an issue with the service?",
-      answer: "If you face any issue with the service, you can report it through the app's support section or contact our customer service team directly."
-    },
-    {
-      id: 4,
-      question: "How do I rate and review a service?",
-      answer: "After the service is completed, you will receive a notification to rate and review your experience. You can provide ratings and write your feedback."
-    },
-    {
-      id: 5,
-      question: "What services does this app provide?",
-      answer: "Our app provides a wide range of services including home cleaning, repairs, beauty services, healthcare, and many more professional services."
-    },
-    {
-      id: 6,
-      question: "Is registration required to use the app?",
-      answer: "Yes, registration is required to book services and track your orders. You can register using your email or phone number."
-    },
-    {
-      id: 7,
-      question: "How can I cancel or reschedule a service?",
-      answer: "You can cancel or reschedule a service by going to your bookings section and selecting the modify or cancel option. Please note that cancellation policies may apply."
-    },
-    {
-      id: 8,
-      question: "What payment methods are accepted?",
-      answer: "We accept various payment methods including credit/debit cards, digital wallets, UPI, and cash on delivery for selected services."
-    }
-  ];
+  // Fetch FAQs from backend
+  useEffect(() => {
+    const fetchLegalPolicies = async () => {
+      try {
+        setLoading(true);
+        const response = await getLegalPolicies();
+        if (response.data.success) {
+          // Transform the data to match the existing structure
+          const transformedFaqs = response.data.legalPolicies.map((policy, index) => ({
+            id: policy._id,
+            question: policy.question,
+            answer: policy.answer
+          }));
+          setFaqs(transformedFaqs);
+        } else {
+          setError("Failed to fetch legal policies");
+        }
+      } catch (err) {
+        console.error("Error fetching legal policies:", err);
+        setError("Failed to fetch legal policies");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLegalPolicies();
+  }, []);
 
   const toggleFaq = (index) => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <strong className="font-bold">Error! </strong>
+        <span className="block sm:inline">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div>

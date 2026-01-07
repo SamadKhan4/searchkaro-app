@@ -18,16 +18,23 @@ export default function Login() {
     setError("");
 
     const res = await login(form);
-    if (res.success) navigate("/dashboard");
-    else setError(res.error);
+    
+    if (res.success) {
+      console.log(res)
+      navigate("/dashboard");
+    } else {
+      setError(res.error);
+    }
 
     setLoading(false);
   };
 
   // Google Login Handler
   const handleGoogleLogin = () => {
+    console.log("Initiating Google login");
     // Redirect to Google OAuth endpoint
-    window.location.href = "https://elite-production-5537.up.railway.app/googlelogin";
+    const baseUrl = import.meta.env.DEV ? "" : "http://localhost:3000";
+    window.location.href = `${baseUrl}/googlelogin`;
   };
 
   // Smooth reveal for elements
@@ -195,7 +202,7 @@ export default function Login() {
             transition={{ delay: 0.45 }}
             className="text-sm text-gray-500"
           >
-            Don’t have an account?{" "}
+            Don't have an account?{" "}
             <Link to="/signup" className="text-cyan-600">
               Sign up
             </Link>
