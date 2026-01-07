@@ -240,7 +240,7 @@ export default function Signup() {
         animate="visible"
         className="hidden md:flex items-center justify-center bg-gray-50"
       >
-        <img src="src/assets/Frame2.png" className="w-4/5" />
+        <img src="public\Frame2.png" className="w-4/5" />
       </motion.div>
     </div>
   );

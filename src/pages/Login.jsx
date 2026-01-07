@@ -33,7 +33,7 @@ export default function Login() {
   const handleGoogleLogin = () => {
     console.log("Initiating Google login");
     // Redirect to Google OAuth endpoint
-    const baseUrl = import.meta.env.DEV ? "" : "http://localhost:3000";
+    const baseUrl = import.meta.env.DEV ? "" : "https://searchkaro-backend.onrender.com";
     window.location.href = `${baseUrl}/googlelogin`;
   };
 
@@ -75,7 +75,7 @@ export default function Login() {
         animate="visible"
         className="hidden md:flex items-center justify-center bg-gray-50"
       >
-        <img src="src/assets/Frame.png" className="w-4/5" />
+        <img src="public\Frame.png" className="w-4/5" />
       </motion.div>
 
       {/* RIGHT FORM — Smooth fade */}
