@@ -75,7 +75,7 @@ export default function Login() {
         animate="visible"
         className="hidden md:flex items-center justify-center bg-gray-50"
       >
-        <img src="public\Frame.png" className="w-4/5" />
+        <img src="\Frame.png" className="w-4/5" />
       </motion.div>
 
       {/* RIGHT FORM — Smooth fade */}
