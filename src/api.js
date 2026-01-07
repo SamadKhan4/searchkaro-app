@@ -1,9 +1,13 @@
 // Axios instance + API helpers for real backend
 import axios from "axios";
 
-// Configure axios instance for the real backend
+// Production-safe API setup: prefer `VITE_API_URL` when provided.
+// In development `.env.development` will set `VITE_API_URL` to http://localhost:3000
+// This avoids relying on a dev-only `server.proxy` and keeps local dev working.
+const BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? "http://localhost:3000" : "https://searchkaro-backend.onrender.com");
+
 const api = axios.create({
-  baseURL: import.meta.env.DEV ? "/api" : "https://searchkaro-backend.onrender.com",
+  baseURL: BASE_URL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
   timeout: 10000,
