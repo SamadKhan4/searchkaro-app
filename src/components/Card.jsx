@@ -4,6 +4,7 @@ export default function Card({ title, value, icon }) {
       <div className="text-3xl">{icon}</div>
       <div>
         <p className="text-gray-500">{title}</p>
+        <p>hello</p>
         <h2 className="text-xl font-semibold">{value}</h2>
       </div>
     </div>
